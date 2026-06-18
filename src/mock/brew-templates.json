@@ -1,0 +1,34 @@
+[
+  {
+    "id": "v60-classic",
+    "name": "V60 经典三段式",
+    "ratio": "1:15",
+    "waterTemp": 92,
+    "brewTime": 180,
+    "description": "30s 闷蒸后分三段注水，适合中浅焙单品"
+  },
+  {
+    "id": "kalita-wave",
+    "name": "Kalita Wave 均匀萃取",
+    "ratio": "1:16",
+    "waterTemp": 90,
+    "brewTime": 210,
+    "description": "中心小范围绕圈注水，口感均衡干净"
+  },
+  {
+    "id": "chemex-bright",
+    "name": "Chemex 明亮风格",
+    "ratio": "1:17",
+    "waterTemp": 94,
+    "brewTime": 240,
+    "description": "较粗研磨、高水温，突出果酸与花香"
+  },
+  {
+    "id": "origami-sweet",
+    "name": "Origami 甜感取向",
+    "ratio": "1:15.5",
+    "waterTemp": 88,
+    "brewTime": 195,
+    "description": "略低水温，延长萃取，强调甜感与body"
+  }
+]

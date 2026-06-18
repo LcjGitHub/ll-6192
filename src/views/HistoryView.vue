@@ -176,16 +176,21 @@ const templateOptions = computed(() => {
   return options
 })
 
-const currentSortOrderIcon = computed(() => {
-  return brewStore.sortOrder === 'asc' ? '↑' : '↓'
+const currentSortOrderText = computed(() => {
+  return brewStore.sortOrder === 'asc' ? '升序' : '降序'
 })
 
 const hasActiveFilter = computed(() => {
-  return brewStore.filterTemplateId !== '' || brewStore.filterMinRating > 0
+  return (
+    brewStore.filterTemplateId !== '' ||
+    brewStore.filterMinRating > 0 ||
+    brewStore.sortField !== 'date' ||
+    brewStore.sortOrder !== 'desc'
+  )
 })
 
-function handleTemplateChange(value: string) {
-  brewStore.setFilterTemplateId(value)
+function handleTemplateChange(value: string | null) {
+  brewStore.setFilterTemplateId(value ?? '')
 }
 
 function handleMinRatingChange(value: number) {
@@ -235,7 +240,6 @@ function handleResetFilter() {
               :value="brewStore.filterTemplateId"
               :options="templateOptions"
               @update:value="handleTemplateChange"
-              clearable
               placeholder="选择模板"
               class="filter-select"
             />
@@ -279,7 +283,7 @@ function handleResetFilter() {
               @click="handleToggleSortOrder"
               class="sort-order-btn"
             >
-              {{ currentSortOrderIcon }}
+              {{ currentSortOrderText }}
             </NButton>
           </div>
         </div>

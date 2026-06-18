@@ -200,22 +200,16 @@ export const useBrewStore = defineStore('brew', {
     },
 
     /** 经过筛选并按当前排序条件排序后的记录（用于页面展示） */
-    filteredSortedRecords(state): BrewRecord[] {
-      let result = [...state.records]
-      if (state.filterTemplateId) {
-        result = result.filter((r) => r.templateId === state.filterTemplateId)
-      }
-      if (state.filterMinRating > 0) {
-        result = result.filter((r) => r.rating >= state.filterMinRating)
-      }
+    filteredSortedRecords(): BrewRecord[] {
+      const result = [...this.filteredRecords]
       result.sort((a, b) => {
         let cmp = 0
-        if (state.sortField === 'date') {
+        if (this.sortField === 'date') {
           cmp = dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
         } else {
           cmp = a.rating - b.rating
         }
-        return state.sortOrder === 'asc' ? cmp : -cmp
+        return this.sortOrder === 'asc' ? cmp : -cmp
       })
       return result
     },
@@ -385,6 +379,8 @@ export const useBrewStore = defineStore('brew', {
     resetHistoryFilter() {
       this.filterTemplateId = ''
       this.filterMinRating = 0
+      this.sortField = 'date'
+      this.sortOrder = 'desc'
     },
   },
 

@@ -215,6 +215,9 @@ function cancelRestore() {
 
         <NSpace vertical :size="8">
           <NSpace :size="8" wrap>
+            <NTag v-if="record.beanName" :bordered="false" type="default">
+              🫘 {{ record.beanName }}
+            </NTag>
             <NTag :bordered="false" type="info">粉水比 {{ record.ratio }}</NTag>
             <NTag :bordered="false" type="warning">{{ record.waterTemp }}°C</NTag>
             <NTag :bordered="false" type="success">

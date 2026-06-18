@@ -52,6 +52,20 @@ export interface CustomTemplateFormModel {
 /**
  * 冲煮记录
  */
+export interface CoffeeBean {
+  id: string
+  name: string
+  origin: string
+  roastLevel: string
+  createdAt: string
+}
+
+export interface CoffeeBeanFormModel {
+  name: string
+  origin: string
+  roastLevel: string
+}
+
 export interface BrewRecord {
   id: string
   templateId: string
@@ -59,12 +73,11 @@ export interface BrewRecord {
   ratio: string
   waterTemp: number
   brewTime: number
-  /** 评分 1–5 */
   rating: number
   notes: string
-  /** 冲煮日期 ISO 字符串 */
   date: string
   createdAt: string
+  beanName?: string
 }
 
 /**
@@ -72,6 +85,7 @@ export interface BrewRecord {
  */
 export interface BrewFormModel {
   templateId: string | null
+  beanId: string | null
   rating: number
   notes: string
   date: number | null

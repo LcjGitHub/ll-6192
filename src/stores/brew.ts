@@ -10,6 +10,8 @@ import type {
   DailyCount,
   CustomBrewTemplate,
   CustomTemplateFormModel,
+  CoffeeBean,
+  CoffeeBeanFormModel,
 } from '@/types/brew'
 
 const NEW_KEY = 'brew-store'
@@ -68,6 +70,7 @@ export const useBrewStore = defineStore('brew', {
   state: () => ({
     records: [] as BrewRecord[],
     customTemplates: [] as CustomBrewTemplate[],
+    beans: [] as CoffeeBean[],
   }),
 
   getters: {
@@ -159,6 +162,17 @@ export const useBrewStore = defineStore('brew', {
       }
       return result
     },
+
+    sortedBeans: (state): CoffeeBean[] =>
+      [...state.beans].sort(
+        (a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf()
+      ),
+
+    getBeanById:
+      (state) =>
+      (id: string): CoffeeBean | undefined => {
+        return state.beans.find((b) => b.id === id)
+      },
   },
 
   actions: {
@@ -246,10 +260,37 @@ export const useBrewStore = defineStore('brew', {
       this.clearRecords()
       this.records = [...records]
     },
+
+    addBean(payload: CoffeeBeanFormModel) {
+      const bean: CoffeeBean = {
+        id: `bean-${crypto.randomUUID()}`,
+        name: payload.name.trim(),
+        origin: payload.origin.trim(),
+        roastLevel: payload.roastLevel.trim(),
+        createdAt: dayjs().toISOString(),
+      }
+      this.beans.push(bean)
+      return bean
+    },
+
+    deleteBean(id: string) {
+      this.beans = this.beans.filter((b) => b.id !== id)
+    },
+
+    updateBean(id: string, payload: CoffeeBeanFormModel) {
+      const idx = this.beans.findIndex((b) => b.id === id)
+      if (idx === -1) return
+      this.beans[idx] = {
+        ...this.beans[idx],
+        name: payload.name.trim(),
+        origin: payload.origin.trim(),
+        roastLevel: payload.roastLevel.trim(),
+      }
+    },
   },
 
   persist: {
     key: NEW_KEY,
-    pick: ['records', 'customTemplates'],
+    pick: ['records', 'customTemplates', 'beans'],
   },
 })

@@ -23,6 +23,7 @@ const menuOptions: MenuOption[] = [
   { label: '冲煮历史', key: 'history' },
   { label: '新建记录', key: 'new' },
   { label: '冲煮方案', key: 'templates' },
+  { label: '咖啡豆档案', key: 'beans' },
   { label: '冲煮倒计时', key: 'timer' },
   { label: '数据统计', key: 'stats' },
 ]

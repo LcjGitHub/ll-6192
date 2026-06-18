@@ -33,6 +33,7 @@ const formRef = ref<FormInst | null>(null)
 
 const formModel = ref<BrewFormModel>({
   templateId: null,
+  beanId: null,
   rating: 3,
   notes: '',
   date: Date.now(),
@@ -74,6 +75,18 @@ const selectedSource = computed(() => {
   return brewStore.allTemplates.find((t) => t.id === formModel.value.templateId)?.source ?? null
 })
 
+const beanOptions = computed<SelectOption[]>(() =>
+  brewStore.sortedBeans.map((b) => ({
+    label: b.name,
+    value: b.id,
+  }))
+)
+
+const selectedBeanName = computed<string | undefined>(() => {
+  if (!formModel.value.beanId) return undefined
+  return brewStore.getBeanById(formModel.value.beanId)?.name
+})
+
 const rules: FormRules = {
   templateId: [{ required: true, message: '请选择冲煮模板', trigger: 'change' }],
   rating: [
@@ -111,6 +124,7 @@ async function handleSubmit() {
     rating: formModel.value.rating,
     notes: formModel.value.notes.trim(),
     date: dayjs(formModel.value.date).format('YYYY-MM-DD'),
+    ...(selectedBeanName.value ? { beanName: selectedBeanName.value } : {}),
   })
 
   message.success('记录已保存')
@@ -141,6 +155,15 @@ function handleCancel() {
             v-model:value="formModel.templateId"
             :options="templateOptions"
             placeholder="选择系统模板或我的方案"
+            clearable
+          />
+        </NFormItem>
+
+        <NFormItem label="咖啡豆" path="beanId">
+          <NSelect
+            v-model:value="formModel.beanId"
+            :options="beanOptions"
+            placeholder="可选，选择咖啡豆"
             clearable
           />
         </NFormItem>

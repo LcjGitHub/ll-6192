@@ -12,6 +12,55 @@ import type {
   CustomTemplateFormModel,
 } from '@/types/brew'
 
+const NEW_KEY = 'brew-store'
+const OLD_KEY = 'pinia-brew'
+
+/**
+ * 迁移旧本地存储键到新键，返回是否发生迁移
+ */
+function migrateOldStorage(): boolean {
+  if (typeof localStorage === 'undefined') return false
+  try {
+    const oldRaw = localStorage.getItem(OLD_KEY)
+    if (!oldRaw) return false
+
+    const oldData = JSON.parse(oldRaw) as { records?: unknown }
+    const oldRecords = Array.isArray(oldData?.records)
+      ? (oldData.records as BrewRecord[]).filter((r) => r && typeof r.id === 'string')
+      : []
+
+    const newRaw = localStorage.getItem(NEW_KEY)
+    const newData: { records?: BrewRecord[]; customTemplates?: CustomBrewTemplate[] } = newRaw
+      ? JSON.parse(newRaw)
+      : {}
+    const newRecords = Array.isArray(newData?.records) ? newData.records : []
+    const existingIds = new Set(newRecords.map((r) => r.id))
+    const merged = [
+      ...newRecords,
+      ...oldRecords.filter((r) => !existingIds.has(r.id)),
+    ]
+
+    localStorage.setItem(
+      NEW_KEY,
+      JSON.stringify({
+        records: merged,
+        customTemplates: Array.isArray(newData?.customTemplates)
+          ? newData.customTemplates
+          : [],
+      })
+    )
+    localStorage.removeItem(OLD_KEY)
+    return true
+  } catch (_e) {
+    try {
+      localStorage.removeItem(OLD_KEY)
+    } catch (_) {}
+    return false
+  }
+}
+
+migrateOldStorage()
+
 /**
  * 冲煮记录 Pinia Store，持久化到 localStorage
  */
@@ -158,7 +207,7 @@ export const useBrewStore = defineStore('brew', {
   },
 
   persist: {
-    key: 'brew-store',
+    key: NEW_KEY,
     pick: ['records', 'customTemplates'],
   },
 })

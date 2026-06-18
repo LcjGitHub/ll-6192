@@ -39,7 +39,8 @@ const formModel = ref<BrewFormModel>({
 })
 
 const templateOptions = computed<(SelectOption | SelectGroupOption)[]>(() => {
-  const systemGroup: SelectGroupOption = {
+  const result: (SelectOption | SelectGroupOption)[] = []
+  result.push({
     type: 'group',
     label: '系统模板',
     key: 'system-group',
@@ -47,17 +48,19 @@ const templateOptions = computed<(SelectOption | SelectGroupOption)[]>(() => {
       label: t.name,
       value: t.id,
     })),
+  })
+  if (brewStore.sortedCustomTemplates.length > 0) {
+    result.push({
+      type: 'group',
+      label: '我的方案',
+      key: 'custom-group',
+      children: brewStore.sortedCustomTemplates.map((t) => ({
+        label: t.name,
+        value: t.id,
+      })),
+    })
   }
-  const customGroup: SelectGroupOption = {
-    type: 'group',
-    label: '我的方案',
-    key: 'custom-group',
-    children: brewStore.sortedCustomTemplates.map((t) => ({
-      label: t.name,
-      value: t.id,
-    })),
-  }
-  return [systemGroup, customGroup]
+  return result
 })
 
 const selectedTemplate = computed(() =>

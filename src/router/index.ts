@@ -16,6 +16,12 @@ const router = createRouter({
       meta: { title: '新建记录' },
     },
     {
+      path: '/edit/:id',
+      name: 'edit',
+      component: () => import('@/views/EditBrewView.vue'),
+      meta: { title: '编辑记录' },
+    },
+    {
       path: '/templates',
       name: 'templates',
       component: () => import('@/views/TemplatesView.vue'),

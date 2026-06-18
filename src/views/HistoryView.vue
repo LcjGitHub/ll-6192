@@ -57,6 +57,10 @@ function goNew() {
   router.push({ name: 'new' })
 }
 
+function handleEdit(id: string) {
+  router.push({ name: 'edit', params: { id } })
+}
+
 function handleDelete(id: string) {
   brewStore.deleteRecord(id)
   message.success('记录已删除')
@@ -234,12 +238,22 @@ function cancelRestore() {
         </NSpace>
 
         <template #action>
-          <NPopconfirm @positive-click="handleDelete(record.id)">
-            <template #trigger>
-              <NButton size="small" quaternary type="error">删除</NButton>
-            </template>
-            确定删除这条冲煮记录吗？
-          </NPopconfirm>
+          <NSpace :size="4">
+            <NButton
+              size="small"
+              quaternary
+              type="primary"
+              @click="handleEdit(record.id)"
+            >
+              编辑
+            </NButton>
+            <NPopconfirm @positive-click="handleDelete(record.id)">
+              <template #trigger>
+                <NButton size="small" quaternary type="error">删除</NButton>
+              </template>
+              确定删除这条冲煮记录吗？
+            </NPopconfirm>
+          </NSpace>
         </template>
       </NCard>
     </NSpace>

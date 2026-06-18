@@ -173,6 +173,13 @@ export const useBrewStore = defineStore('brew', {
       (id: string): CoffeeBean | undefined => {
         return state.beans.find((b) => b.id === id)
       },
+
+    /** 根据 ID 查找冲煮记录 */
+    getRecordById:
+      (state) =>
+      (id: string): BrewRecord | undefined => {
+        return state.records.find((r) => r.id === id)
+      },
   },
 
   actions: {
@@ -193,6 +200,21 @@ export const useBrewStore = defineStore('brew', {
      */
     deleteRecord(id: string) {
       this.records = this.records.filter((r) => r.id !== id)
+    },
+
+    /**
+     * 更新冲煮记录（根据 id 查找并更新可编辑字段）
+     */
+    updateRecord(
+      id: string,
+      payload: Omit<BrewRecord, 'id' | 'createdAt'>
+    ) {
+      const idx = this.records.findIndex((r) => r.id === id)
+      if (idx === -1) return
+      this.records[idx] = {
+        ...this.records[idx],
+        ...payload,
+      }
     },
 
     /**

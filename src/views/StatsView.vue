@@ -55,7 +55,7 @@ function goNew() {
               <NText depth="3" class="stat-label">平均星级评分</NText>
               <div class="rating-value-row">
                 <span class="rating-number">{{ brewStore.averageRating }}</span>
-                <NRate :value="brewStore.averageRating" readonly size="medium" />
+                <NRate :value="brewStore.averageRating" readonly allow-half size="medium" />
               </div>
             </div>
           </NCard>

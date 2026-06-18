@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 import templates from '@/mock/brew-templates.json'
 import type { BrewRecord, BrewTemplate, TemplateUsageRank, DailyCount } from '@/types/brew'
 
@@ -61,7 +62,7 @@ export const useBrewStore = defineStore('brew', {
     last7DaysDailyCount: (state): DailyCount[] => {
       const result: DailyCount[] = []
       for (let i = 6; i >= 0; i--) {
-        const day = dayjs().subtract(i, 'day')
+        const day = dayjs().subtract(i, 'day').locale('zh-cn')
         const dateStr = day.format('YYYY-MM-DD')
         result.push({ date: dateStr, weekday: day.format('ddd'), count: 0 })
       }

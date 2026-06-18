@@ -11,8 +11,12 @@ import {
   NSpace,
   NText,
   NModal,
+  NSelect,
+  NButtonGroup,
+  NSlider,
   useMessage,
 } from 'naive-ui'
+import type { SortField } from '@/types/brew'
 import { useBrewStore } from '@/stores/brew'
 import { formatBrewTime, formatDate } from '@/utils/format'
 import {
@@ -161,6 +165,44 @@ function cancelRestore() {
   pendingBackupData.value = null
   pendingInvalidCount.value = 0
 }
+
+const templateOptions = computed(() => {
+  const options = [
+    { label: '全部模板', value: '' },
+  ]
+  for (const t of brewStore.usedTemplateList) {
+    options.push({ label: t.name, value: t.id })
+  }
+  return options
+})
+
+const currentSortOrderIcon = computed(() => {
+  return brewStore.sortOrder === 'asc' ? '↑' : '↓'
+})
+
+const hasActiveFilter = computed(() => {
+  return brewStore.filterTemplateId !== '' || brewStore.filterMinRating > 0
+})
+
+function handleTemplateChange(value: string) {
+  brewStore.setFilterTemplateId(value)
+}
+
+function handleMinRatingChange(value: number) {
+  brewStore.setFilterMinRating(value)
+}
+
+function handleSortFieldChange(value: SortField) {
+  brewStore.setSortField(value)
+}
+
+function handleToggleSortOrder() {
+  brewStore.toggleSortOrder()
+}
+
+function handleResetFilter() {
+  brewStore.resetHistoryFilter()
+}
 </script>
 
 <template>
@@ -169,6 +211,80 @@ function cancelRestore() {
       <h1 class="page-title">冲煮历史</h1>
       <NButton type="primary" @click="goNew">新建记录</NButton>
     </div>
+
+    <NCard class="filter-section" size="small">
+      <template #header>
+        <div class="filter-header">
+          <span class="filter-title">筛选与排序</span>
+          <NButton
+            v-if="hasActiveFilter"
+            size="small"
+            quaternary
+            type="info"
+            @click="handleResetFilter"
+          >
+            重置筛选
+          </NButton>
+        </div>
+      </template>
+      <div class="filter-content">
+        <div class="filter-row">
+          <div class="filter-item">
+            <span class="filter-label">冲煮模板</span>
+            <NSelect
+              :value="brewStore.filterTemplateId"
+              :options="templateOptions"
+              @update:value="handleTemplateChange"
+              clearable
+              placeholder="选择模板"
+              class="filter-select"
+            />
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">最低星级</span>
+            <div class="slider-wrapper">
+              <NSlider
+                :value="brewStore.filterMinRating"
+                :min="0"
+                :max="5"
+                :step="1"
+                :marks="{ 0: '不限', 1: '1★', 2: '2★', 3: '3★', 4: '4★', 5: '5★' }"
+                @update:value="handleMinRatingChange"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-item sort-item">
+            <span class="filter-label">排序方式</span>
+            <NButtonGroup>
+              <NButton
+                size="small"
+                :type="brewStore.sortField === 'date' ? 'primary' : 'default'"
+                @click="handleSortFieldChange('date')"
+              >
+                按日期
+              </NButton>
+              <NButton
+                size="small"
+                :type="brewStore.sortField === 'rating' ? 'primary' : 'default'"
+                @click="handleSortFieldChange('rating')"
+              >
+                按星级
+              </NButton>
+            </NButtonGroup>
+            <NButton
+              size="small"
+              quaternary
+              @click="handleToggleSortOrder"
+              class="sort-order-btn"
+            >
+              {{ currentSortOrderIcon }}
+            </NButton>
+          </div>
+        </div>
+      </div>
+    </NCard>
 
     <NCard class="backup-section" size="small">
       <template #header>
@@ -197,7 +313,7 @@ function cancelRestore() {
     </NCard>
 
     <NEmpty
-      v-if="brewStore.sortedRecords.length === 0"
+      v-if="brewStore.records.length === 0"
       description="还没有冲煮记录，开始你的第一杯吧"
       class="empty-state"
     >
@@ -206,9 +322,19 @@ function cancelRestore() {
       </template>
     </NEmpty>
 
+    <NEmpty
+      v-else-if="brewStore.filteredSortedRecords.length === 0"
+      description="没有符合筛选条件的记录，试试调整筛选条件"
+      class="empty-state"
+    >
+      <template #extra>
+        <NButton type="info" @click="handleResetFilter">重置筛选</NButton>
+      </template>
+    </NEmpty>
+
     <NSpace v-else vertical :size="12" class="records-list">
       <NCard
-        v-for="record in brewStore.sortedRecords"
+        v-for="record in brewStore.filteredSortedRecords"
         :key="record.id"
         size="small"
         :title="record.templateName"
@@ -327,6 +453,68 @@ function cancelRestore() {
   font-size: 22px;
   font-weight: 600;
   color: #6f4e37;
+}
+
+.filter-section {
+  margin-bottom: 20px;
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-title {
+  font-weight: 500;
+  color: #6f4e37;
+}
+
+.filter-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.filter-label {
+  font-size: 14px;
+  color: #555;
+  white-space: nowrap;
+  min-width: 72px;
+}
+
+.filter-select {
+  flex: 1;
+  min-width: 160px;
+}
+
+.slider-wrapper {
+  flex: 1;
+  min-width: 200px;
+}
+
+.sort-item {
+  max-width: 360px;
+}
+
+.sort-order-btn {
+  min-width: 40px;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .backup-section {

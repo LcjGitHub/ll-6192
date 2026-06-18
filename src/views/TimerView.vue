@@ -167,7 +167,7 @@ function showFinishDialog() {
     title: '⏰ 冲煮时间到！',
     content: `「${selectedTemplate.value?.name}」的冲煮时间已到，请停止注水。`,
     positiveText: '知道了',
-    showNegative: false,
+    negativeText: '',
   })
 }
 

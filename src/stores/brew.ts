@@ -12,6 +12,8 @@ import type {
   CustomTemplateFormModel,
   CoffeeBean,
   CoffeeBeanFormModel,
+  SortField,
+  SortOrder,
 } from '@/types/brew'
 
 const NEW_KEY = 'brew-store'
@@ -71,6 +73,10 @@ export const useBrewStore = defineStore('brew', {
     records: [] as BrewRecord[],
     customTemplates: [] as CustomBrewTemplate[],
     beans: [] as CoffeeBean[],
+    filterTemplateId: '' as string,
+    filterMinRating: 0 as number,
+    sortField: 'date' as SortField,
+    sortOrder: 'desc' as SortOrder,
   }),
 
   getters: {
@@ -180,6 +186,50 @@ export const useBrewStore = defineStore('brew', {
       (id: string): BrewRecord | undefined => {
         return state.records.find((r) => r.id === id)
       },
+
+    /** 按模板 ID 和最低星级筛选后的记录 */
+    filteredRecords(state): BrewRecord[] {
+      let result = [...state.records]
+      if (state.filterTemplateId) {
+        result = result.filter((r) => r.templateId === state.filterTemplateId)
+      }
+      if (state.filterMinRating > 0) {
+        result = result.filter((r) => r.rating >= state.filterMinRating)
+      }
+      return result
+    },
+
+    /** 经过筛选并按当前排序条件排序后的记录（用于页面展示） */
+    filteredSortedRecords(state): BrewRecord[] {
+      let result = [...state.records]
+      if (state.filterTemplateId) {
+        result = result.filter((r) => r.templateId === state.filterTemplateId)
+      }
+      if (state.filterMinRating > 0) {
+        result = result.filter((r) => r.rating >= state.filterMinRating)
+      }
+      result.sort((a, b) => {
+        let cmp = 0
+        if (state.sortField === 'date') {
+          cmp = dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
+        } else {
+          cmp = a.rating - b.rating
+        }
+        return state.sortOrder === 'asc' ? cmp : -cmp
+      })
+      return result
+    },
+
+    /** 已使用过的所有模板列表（去重，用于筛选下拉） */
+    usedTemplateList(state): { id: string; name: string }[] {
+      const map = new Map<string, string>()
+      for (const r of state.records) {
+        if (!map.has(r.templateId)) {
+          map.set(r.templateId, r.templateName)
+        }
+      }
+      return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
+    },
   },
 
   actions: {
@@ -310,6 +360,31 @@ export const useBrewStore = defineStore('brew', {
         origin: payload.origin.trim(),
         roastLevel: payload.roastLevel.trim(),
       }
+    },
+
+    setFilterTemplateId(templateId: string) {
+      this.filterTemplateId = templateId
+    },
+
+    setFilterMinRating(rating: number) {
+      this.filterMinRating = rating
+    },
+
+    setSortField(field: SortField) {
+      this.sortField = field
+    },
+
+    setSortOrder(order: SortOrder) {
+      this.sortOrder = order
+    },
+
+    toggleSortOrder() {
+      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc'
+    },
+
+    resetHistoryFilter() {
+      this.filterTemplateId = ''
+      this.filterMinRating = 0
     },
   },
 

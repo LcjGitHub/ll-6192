@@ -108,3 +108,29 @@ export interface DailyCount {
   weekday: string
   count: number
 }
+
+/**
+ * 排序字段
+ */
+export type SortField = 'date' | 'rating'
+
+/**
+ * 排序方向
+ */
+export type SortOrder = 'asc' | 'desc'
+
+/**
+ * 历史记录筛选条件
+ */
+export interface HistoryFilter {
+  templateId: string
+  minRating: number
+}
+
+/**
+ * 历史记录排序条件
+ */
+export interface HistorySort {
+  field: SortField
+  order: SortOrder
+}

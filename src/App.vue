@@ -17,7 +17,11 @@ import {
 const route = useRoute()
 const router = useRouter()
 
-const activeKey = computed(() => route.name as string)
+const activeKey = computed(() => {
+  const name = route.name as string
+  if (name === 'edit') return 'history'
+  return name
+})
 
 const menuOptions: MenuOption[] = [
   { label: '冲煮历史', key: 'history' },

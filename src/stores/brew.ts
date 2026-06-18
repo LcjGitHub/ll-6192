@@ -204,17 +204,19 @@ export const useBrewStore = defineStore('brew', {
 
     /**
      * 更新冲煮记录（根据 id 查找并更新可编辑字段）
+     * 返回是否更新成功（记录不存在时返回 false）
      */
     updateRecord(
       id: string,
       payload: Omit<BrewRecord, 'id' | 'createdAt'>
-    ) {
+    ): boolean {
       const idx = this.records.findIndex((r) => r.id === id)
-      if (idx === -1) return
+      if (idx === -1) return false
       this.records[idx] = {
         ...this.records[idx],
         ...payload,
       }
+      return true
     },
 
     /**

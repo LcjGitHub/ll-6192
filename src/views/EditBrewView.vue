@@ -15,6 +15,7 @@ import {
   NDescriptionsItem,
   NText,
   NTag,
+  NSpin,
   useMessage,
   type FormInst,
   type FormRules,
@@ -31,6 +32,8 @@ const router = useRouter()
 const message = useMessage()
 const brewStore = useBrewStore()
 const formRef = ref<FormInst | null>(null)
+const isLoading = ref(true)
+const recordExists = ref(false)
 
 const editingId = computed(() => route.params.id as string)
 const originalRecord = computed(() => brewStore.getRecordById(editingId.value))
@@ -49,6 +52,7 @@ onMounted(() => {
     router.push({ name: 'history' })
     return
   }
+  recordExists.value = true
   const r = originalRecord.value
   formModel.value.templateId = r.templateId
   formModel.value.rating = r.rating
@@ -60,6 +64,7 @@ onMounted(() => {
       formModel.value.beanId = matched.id
     }
   }
+  isLoading.value = false
 })
 
 const templateOptions = computed<(SelectOption | SelectGroupOption)[]>(() => {
@@ -108,10 +113,8 @@ const beanOptions = computed<SelectOption[]>(() =>
 const hasBeans = computed(() => brewStore.sortedBeans.length > 0)
 
 const selectedBeanName = computed<string | undefined>(() => {
-  if (formModel.value.beanId) {
-    return brewStore.getBeanById(formModel.value.beanId)?.name
-  }
-  return originalRecord.value?.beanName
+  if (!formModel.value.beanId) return undefined
+  return brewStore.getBeanById(formModel.value.beanId)?.name
 })
 
 const rules: FormRules = {
@@ -141,7 +144,7 @@ async function handleSubmit() {
   const template = selectedTemplate.value
   if (!template || formModel.value.date === null) return
 
-  brewStore.updateRecord(editingId.value, {
+  const success = brewStore.updateRecord(editingId.value, {
     templateId: template.id,
     templateName: template.name,
     ratio: template.ratio,
@@ -150,11 +153,15 @@ async function handleSubmit() {
     rating: formModel.value.rating,
     notes: formModel.value.notes.trim(),
     date: dayjs(formModel.value.date).format('YYYY-MM-DD'),
-    ...(selectedBeanName.value ? { beanName: selectedBeanName.value } : {}),
+    beanName: selectedBeanName.value,
   })
 
-  message.success('保存成功')
-  router.push({ name: 'history' })
+  if (success) {
+    message.success('保存成功')
+    router.push({ name: 'history' })
+  } else {
+    message.error('保存失败，记录不存在或已被删除')
+  }
 }
 
 function handleCancel() {
@@ -166,7 +173,11 @@ function handleCancel() {
   <div class="edit-page">
     <h1 class="page-title">编辑冲煮记录</h1>
 
-    <NCard>
+    <div v-if="isLoading" class="loading-wrapper">
+      <NSpin size="large" />
+    </div>
+
+    <NCard v-else-if="recordExists">
       <NForm
         ref="formRef"
         :model="formModel"
@@ -272,6 +283,12 @@ function handleCancel() {
   font-size: 22px;
   font-weight: 600;
   color: #6f4e37;
+}
+
+.loading-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
 }
 
 .template-preview {

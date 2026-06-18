@@ -27,6 +27,12 @@ const router = createRouter({
       component: () => import('@/views/StatsView.vue'),
       meta: { title: '数据统计' },
     },
+    {
+      path: '/timer',
+      name: 'timer',
+      component: () => import('@/views/TimerView.vue'),
+      meta: { title: '冲煮倒计时' },
+    },
   ],
 })
 

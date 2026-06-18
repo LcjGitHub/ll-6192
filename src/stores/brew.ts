@@ -2,7 +2,15 @@ import { defineStore } from 'pinia'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import templates from '@/mock/brew-templates.json'
-import type { BrewRecord, BrewTemplate, TemplateUsageRank, DailyCount } from '@/types/brew'
+import type {
+  BrewRecord,
+  BrewTemplate,
+  BrewTemplateWithSource,
+  TemplateUsageRank,
+  DailyCount,
+  CustomBrewTemplate,
+  CustomTemplateFormModel,
+} from '@/types/brew'
 
 /**
  * 冲煮记录 Pinia Store，持久化到 localStorage
@@ -10,6 +18,7 @@ import type { BrewRecord, BrewTemplate, TemplateUsageRank, DailyCount } from '@/
 export const useBrewStore = defineStore('brew', {
   state: () => ({
     records: [] as BrewRecord[],
+    customTemplates: [] as CustomBrewTemplate[],
   }),
 
   getters: {
@@ -19,14 +28,35 @@ export const useBrewStore = defineStore('brew', {
         (a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf()
       ),
 
-    /** Mock 冲煮模板列表 */
-    templates: (): BrewTemplate[] => templates as BrewTemplate[],
+    /** 系统 Mock 冲煮模板列表 */
+    systemTemplates: (): BrewTemplate[] => templates as BrewTemplate[],
 
-    /** 根据 ID 查找模板 */
+    /** 用户自定义方案列表（按创建时间倒序） */
+    sortedCustomTemplates: (state): CustomBrewTemplate[] =>
+      [...state.customTemplates].sort(
+        (a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf()
+      ),
+
+    /** 所有模板（系统 + 自定义，统一格式，带来源标记） */
+    allTemplates(): BrewTemplateWithSource[] {
+      const systemList: BrewTemplateWithSource[] = (templates as BrewTemplate[]).map(
+        (t) => ({ ...t, source: 'system' as const })
+      )
+      const customList: BrewTemplateWithSource[] = this.customTemplates.map((t) => ({
+        ...t,
+        source: 'custom' as const,
+      }))
+      return [...systemList, ...customList]
+    },
+
+    /** 根据 ID 查找模板（同时查找系统模板和自定义方案） */
     getTemplateById:
-      () =>
-      (id: string): BrewTemplate | undefined =>
-        (templates as BrewTemplate[]).find((t) => t.id === id),
+      (state) =>
+      (id: string): BrewTemplate | undefined => {
+        const system = (templates as BrewTemplate[]).find((t) => t.id === id)
+        if (system) return system
+        return state.customTemplates.find((t) => t.id === id)
+      },
 
     /** 历史记录总条数 */
     totalRecords: (state): number => state.records.length,
@@ -101,7 +131,34 @@ export const useBrewStore = defineStore('brew', {
     deleteRecord(id: string) {
       this.records = this.records.filter((r) => r.id !== id)
     },
+
+    /**
+     * 新增用户自定义冲煮方案
+     */
+    addCustomTemplate(payload: CustomTemplateFormModel) {
+      const template: CustomBrewTemplate = {
+        id: `custom-${crypto.randomUUID()}`,
+        name: payload.name.trim(),
+        ratio: payload.ratio.trim(),
+        waterTemp: payload.waterTemp!,
+        brewTime: payload.brewTime!,
+        description: payload.description.trim(),
+        createdAt: dayjs().toISOString(),
+      }
+      this.customTemplates.push(template)
+      return template
+    },
+
+    /**
+     * 删除用户自定义冲煮方案
+     */
+    deleteCustomTemplate(id: string) {
+      this.customTemplates = this.customTemplates.filter((t) => t.id !== id)
+    },
   },
 
-  persist: true,
+  persist: {
+    key: 'brew-store',
+    pick: ['records', 'customTemplates'],
+  },
 })

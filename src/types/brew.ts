@@ -1,8 +1,7 @@
 /**
- * 冲煮模板
+ * 冲煮模板（基础字段）
  */
-export interface BrewTemplate {
-  id: string
+export interface BrewTemplateBase {
   name: string
   /** 粉水比，如 1:15 */
   ratio: string
@@ -10,6 +9,43 @@ export interface BrewTemplate {
   waterTemp: number
   /** 冲煮时间（秒） */
   brewTime: number
+  description: string
+}
+
+/**
+ * 系统冲煮模板
+ */
+export interface BrewTemplate extends BrewTemplateBase {
+  id: string
+}
+
+/**
+ * 模板来源
+ */
+export type TemplateSource = 'system' | 'custom'
+
+/**
+ * 带来源标记的模板（用于下拉框统一展示）
+ */
+export interface BrewTemplateWithSource extends BrewTemplate {
+  source: TemplateSource
+}
+
+/**
+ * 用户自定义冲煮方案
+ */
+export interface CustomBrewTemplate extends BrewTemplate {
+  createdAt: string
+}
+
+/**
+ * 新建自定义方案表单
+ */
+export interface CustomTemplateFormModel {
+  name: string
+  ratio: string
+  waterTemp: number | null
+  brewTime: number | null
   description: string
 }
 

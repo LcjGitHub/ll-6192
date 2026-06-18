@@ -14,9 +14,12 @@ import {
   NDescriptions,
   NDescriptionsItem,
   NText,
+  NTag,
   useMessage,
   type FormInst,
   type FormRules,
+  type SelectOption,
+  type SelectGroupOption,
 } from 'naive-ui'
 import dayjs from 'dayjs'
 import { useBrewStore } from '@/stores/brew'
@@ -35,18 +38,38 @@ const formModel = ref<BrewFormModel>({
   date: Date.now(),
 })
 
-const templateOptions = computed(() =>
-  brewStore.templates.map((t) => ({
-    label: t.name,
-    value: t.id,
-  }))
-)
+const templateOptions = computed<(SelectOption | SelectGroupOption)[]>(() => {
+  const systemGroup: SelectGroupOption = {
+    type: 'group',
+    label: '系统模板',
+    key: 'system-group',
+    children: brewStore.systemTemplates.map((t) => ({
+      label: t.name,
+      value: t.id,
+    })),
+  }
+  const customGroup: SelectGroupOption = {
+    type: 'group',
+    label: '我的方案',
+    key: 'custom-group',
+    children: brewStore.sortedCustomTemplates.map((t) => ({
+      label: t.name,
+      value: t.id,
+    })),
+  }
+  return [systemGroup, customGroup]
+})
 
 const selectedTemplate = computed(() =>
   formModel.value.templateId
     ? brewStore.getTemplateById(formModel.value.templateId)
     : undefined
 )
+
+const selectedSource = computed(() => {
+  if (!formModel.value.templateId) return null
+  return brewStore.allTemplates.find((t) => t.id === formModel.value.templateId)?.source ?? null
+})
 
 const rules: FormRules = {
   templateId: [{ required: true, message: '请选择冲煮模板', trigger: 'change' }],
@@ -114,26 +137,37 @@ function handleCancel() {
           <NSelect
             v-model:value="formModel.templateId"
             :options="templateOptions"
-            placeholder="选择 Mock 模板"
+            placeholder="选择系统模板或我的方案"
             clearable
           />
         </NFormItem>
 
         <NFormItem v-if="selectedTemplate" label="模板参数">
-          <NDescriptions :column="1" size="small" bordered>
-            <NDescriptionsItem label="粉水比">
-              {{ selectedTemplate.ratio }}
-            </NDescriptionsItem>
-            <NDescriptionsItem label="水温">
-              {{ selectedTemplate.waterTemp }}°C
-            </NDescriptionsItem>
-            <NDescriptionsItem label="冲煮时间">
-              {{ formatBrewTime(selectedTemplate.brewTime) }}
-            </NDescriptionsItem>
-            <NDescriptionsItem label="说明">
-              <NText depth="3">{{ selectedTemplate.description }}</NText>
-            </NDescriptionsItem>
-          </NDescriptions>
+          <div class="template-preview">
+            <div class="template-header">
+              <span class="template-name">{{ selectedTemplate.name }}</span>
+              <NTag
+                size="small"
+                :type="selectedSource === 'system' ? 'info' : 'success'"
+              >
+                {{ selectedSource === 'system' ? '系统模板' : '自定义' }}
+              </NTag>
+            </div>
+            <NDescriptions :column="1" size="small" bordered>
+              <NDescriptionsItem label="粉水比">
+                {{ selectedTemplate.ratio }}
+              </NDescriptionsItem>
+              <NDescriptionsItem label="水温">
+                {{ selectedTemplate.waterTemp }}°C
+              </NDescriptionsItem>
+              <NDescriptionsItem label="冲煮时间">
+                {{ formatBrewTime(selectedTemplate.brewTime) }}
+              </NDescriptionsItem>
+              <NDescriptionsItem label="说明">
+                <NText depth="3">{{ selectedTemplate.description }}</NText>
+              </NDescriptionsItem>
+            </NDescriptions>
+          </div>
         </NFormItem>
 
         <NFormItem label="评分" path="rating">
@@ -179,6 +213,22 @@ function handleCancel() {
 .page-title {
   margin: 0 0 20px;
   font-size: 22px;
+  font-weight: 600;
+  color: #6f4e37;
+}
+
+.template-preview {
+  width: 100%;
+}
+
+.template-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.template-name {
   font-weight: 600;
   color: #6f4e37;
 }

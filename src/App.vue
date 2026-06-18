@@ -22,6 +22,7 @@ const activeKey = computed(() => route.name as string)
 const menuOptions: MenuOption[] = [
   { label: '冲煮历史', key: 'history' },
   { label: '新建记录', key: 'new' },
+  { label: '冲煮方案', key: 'templates' },
   { label: '数据统计', key: 'stats' },
 ]
 

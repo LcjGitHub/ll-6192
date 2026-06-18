@@ -16,6 +16,12 @@ const router = createRouter({
       meta: { title: '新建记录' },
     },
     {
+      path: '/templates',
+      name: 'templates',
+      component: () => import('@/views/TemplatesView.vue'),
+      meta: { title: '冲煮方案' },
+    },
+    {
       path: '/stats',
       name: 'stats',
       component: () => import('@/views/StatsView.vue'),

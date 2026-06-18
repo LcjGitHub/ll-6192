@@ -22,7 +22,6 @@ import {
   parseBackup,
   readFileAsText,
   validateBackupRecords,
-  validateBackupTemplates,
   type BackupData,
 } from '@/utils/backup'
 
@@ -32,20 +31,26 @@ const brewStore = useBrewStore()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const pendingBackupData = ref<BackupData | null>(null)
+const pendingInvalidCount = ref(0)
 const showRestoreDialog = ref(false)
 const showOverwriteConfirm = ref(false)
+const showMergeConfirm = ref(false)
 
 const restoreSummary = computed(() => {
   if (!pendingBackupData.value) return ''
-  const { records, customTemplates } = pendingBackupData.value
+  const { records } = pendingBackupData.value
   const parts: string[] = []
   if (records.length > 0) {
     parts.push(`${records.length} 条冲煮记录`)
   }
-  if (customTemplates.length > 0) {
-    parts.push(`${customTemplates.length} 个自定义方案`)
+  if (pendingInvalidCount.value > 0) {
+    parts.push(`忽略 ${pendingInvalidCount.value} 条无效数据`)
   }
   return parts.join('，')
+})
+
+const restoreValidCount = computed(() => {
+  return pendingBackupData.value?.records.length ?? 0
 })
 
 function goNew() {
@@ -58,7 +63,7 @@ function handleDelete(id: string) {
 }
 
 function handleBackup() {
-  const backupData = createBackupData(brewStore.records, brewStore.customTemplates)
+  const backupData = createBackupData(brewStore.records)
   const content = serializeBackup(backupData)
   downloadBackup(content)
   message.success('备份文件已下载')
@@ -76,20 +81,23 @@ async function handleFileChange(event: Event) {
   try {
     const text = await readFileAsText(file)
     const backupData = parseBackup(text)
-    const validRecords = validateBackupRecords(backupData.records)
-    const validTemplates = validateBackupTemplates(backupData.customTemplates)
+    const validateResult = validateBackupRecords(backupData.records)
 
-    if (validRecords.length === 0 && validTemplates.length === 0) {
-      message.warning('备份文件中没有有效的数据')
+    if (validateResult.valid.length === 0) {
+      if (validateResult.invalidCount > 0) {
+        message.warning(`备份文件中没有有效记录（忽略 ${validateResult.invalidCount} 条无效数据）`)
+      } else {
+        message.warning('备份文件中没有有效记录')
+      }
       input.value = ''
       return
     }
 
     pendingBackupData.value = {
       ...backupData,
-      records: validRecords,
-      customTemplates: validTemplates,
+      records: validateResult.valid,
     }
+    pendingInvalidCount.value = validateResult.invalidCount
     showRestoreDialog.value = true
   } catch (e) {
     message.error((e as Error).message || '文件解析失败')
@@ -98,16 +106,27 @@ async function handleFileChange(event: Event) {
   input.value = ''
 }
 
-function handleMergeRestore() {
+function handleMergeClick() {
+  showMergeConfirm.value = true
+}
+
+function confirmMergeRestore() {
   if (!pendingBackupData.value) return
   const data = pendingBackupData.value
   const addedRecords = brewStore.addRecords(data.records)
-  const addedTemplates = brewStore.addCustomTemplates(data.customTemplates)
-  message.success(
-    `恢复成功：新增 ${addedRecords} 条记录${addedTemplates > 0 ? `，${addedTemplates} 个方案` : ''}`
-  )
+  let msg = `恢复成功：新增 ${addedRecords} 条记录`
+  if (pendingInvalidCount.value > 0) {
+    msg += `（忽略 ${pendingInvalidCount.value} 条无效数据）`
+  }
+  message.success(msg)
+  showMergeConfirm.value = false
   showRestoreDialog.value = false
   pendingBackupData.value = null
+  pendingInvalidCount.value = 0
+}
+
+function cancelMergeConfirm() {
+  showMergeConfirm.value = false
 }
 
 function handleOverwriteClick() {
@@ -118,13 +137,15 @@ function confirmOverwriteRestore() {
   if (!pendingBackupData.value) return
   const data = pendingBackupData.value
   brewStore.replaceRecords(data.records)
-  brewStore.replaceCustomTemplates(data.customTemplates)
-  message.success(
-    `恢复成功：共 ${data.records.length} 条记录${data.customTemplates.length > 0 ? `，${data.customTemplates.length} 个方案` : ''}`
-  )
+  let msg = `恢复成功：共 ${data.records.length} 条记录`
+  if (pendingInvalidCount.value > 0) {
+    msg += `（忽略 ${pendingInvalidCount.value} 条无效数据）`
+  }
+  message.success(msg)
   showOverwriteConfirm.value = false
   showRestoreDialog.value = false
   pendingBackupData.value = null
+  pendingInvalidCount.value = 0
 }
 
 function cancelOverwriteConfirm() {
@@ -134,6 +155,7 @@ function cancelOverwriteConfirm() {
 function cancelRestore() {
   showRestoreDialog.value = false
   pendingBackupData.value = null
+  pendingInvalidCount.value = 0
 }
 </script>
 
@@ -149,7 +171,7 @@ function cancelRestore() {
         <div class="backup-header">
           <span class="backup-title">数据备份与恢复</span>
           <NText depth="3" class="backup-desc">
-            备份您的冲煮记录和自定义方案，或从备份文件恢复
+            备份您的冲煮记录，或从备份文件恢复
           </NText>
         </div>
       </template>
@@ -227,13 +249,13 @@ function cancelRestore() {
       :content="`检测到 ${restoreSummary}，请选择恢复方式：`"
       positive-text="合并（保留现有）"
       negative-text="取消"
-      @positive-click="handleMergeRestore"
+      @positive-click="handleMergeClick"
       @negative-click="cancelRestore"
     >
       <template #action>
         <NSpace justify="end">
           <NButton quaternary @click="cancelRestore">取消</NButton>
-          <NButton type="success" @click="handleMergeRestore">
+          <NButton type="success" @click="handleMergeClick">
             合并（保留现有）
           </NButton>
           <NButton type="warning" @click="handleOverwriteClick">
@@ -244,12 +266,25 @@ function cancelRestore() {
     </NModal>
 
     <NModal
+      v-model:show="showMergeConfirm"
+      :mask-closable="false"
+      preset="dialog"
+      title="确认合并恢复"
+      type="info"
+      :content="`将合并 ${restoreValidCount} 条记录到现有数据中，相同 ID 的记录将被跳过。确定继续吗？`"
+      positive-text="确定合并"
+      negative-text="取消"
+      @positive-click="confirmMergeRestore"
+      @negative-click="cancelMergeConfirm"
+    />
+
+    <NModal
       v-model:show="showOverwriteConfirm"
       :mask-closable="false"
       preset="dialog"
       title="确认覆盖"
       type="warning"
-      content="此操作将清空所有现有记录和自定义方案，然后恢复备份中的数据。此操作不可撤销，确定继续吗？"
+      content="此操作将清空所有现有记录，然后恢复备份中的数据。此操作不可撤销，确定继续吗？"
       positive-text="确定覆盖"
       negative-text="取消"
       @positive-click="confirmOverwriteRestore"

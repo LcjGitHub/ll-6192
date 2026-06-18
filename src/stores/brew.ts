@@ -243,14 +243,8 @@ export const useBrewStore = defineStore('brew', {
      * 覆盖写入所有记录（先清空后写入）
      */
     replaceRecords(records: BrewRecord[]) {
+      this.clearRecords()
       this.records = [...records]
-    },
-
-    /**
-     * 覆盖写入所有自定义模板（先清空后写入）
-     */
-    replaceCustomTemplates(templates: CustomBrewTemplate[]) {
-      this.customTemplates = [...templates]
     },
   },
 

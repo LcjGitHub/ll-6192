@@ -1,24 +1,24 @@
 import dayjs from 'dayjs'
-import type { BrewRecord, CustomBrewTemplate } from '@/types/brew'
+import type { BrewRecord } from '@/types/brew'
 
 export interface BackupData {
   version: string
   exportedAt: string
   records: BrewRecord[]
-  customTemplates: CustomBrewTemplate[]
+}
+
+export interface ValidateResult {
+  valid: BrewRecord[]
+  invalidCount: number
 }
 
 const BACKUP_VERSION = '1.0.0'
 
-export function createBackupData(
-  records: BrewRecord[],
-  customTemplates: CustomBrewTemplate[]
-): BackupData {
+export function createBackupData(records: BrewRecord[]): BackupData {
   return {
     version: BACKUP_VERSION,
     exportedAt: dayjs().toISOString(),
     records: [...records],
-    customTemplates: [...customTemplates],
   }
 }
 
@@ -48,9 +48,6 @@ export function parseBackup(raw: string): BackupData {
   if (!data.version || !data.records || !Array.isArray(data.records)) {
     throw new Error('备份文件内容不完整')
   }
-  if (!Array.isArray(data.customTemplates)) {
-    data.customTemplates = []
-  }
   return data as BackupData
 }
 
@@ -67,8 +64,8 @@ export function readFileAsText(file: File): Promise<string> {
   })
 }
 
-export function validateBackupRecords(records: unknown[]): BrewRecord[] {
-  return records.filter((r): r is BrewRecord => {
+export function validateBackupRecords(records: unknown[]): ValidateResult {
+  const valid = records.filter((r): r is BrewRecord => {
     if (!r || typeof r !== 'object') return false
     const rec = r as Record<string, unknown>
     return (
@@ -84,22 +81,8 @@ export function validateBackupRecords(records: unknown[]): BrewRecord[] {
       typeof rec.createdAt === 'string'
     )
   })
-}
-
-export function validateBackupTemplates(
-  templates: unknown[]
-): CustomBrewTemplate[] {
-  return templates.filter((t): t is CustomBrewTemplate => {
-    if (!t || typeof t !== 'object') return false
-    const tmpl = t as Record<string, unknown>
-    return (
-      typeof tmpl.id === 'string' &&
-      typeof tmpl.name === 'string' &&
-      typeof tmpl.ratio === 'string' &&
-      typeof tmpl.waterTemp === 'number' &&
-      typeof tmpl.brewTime === 'number' &&
-      typeof tmpl.description === 'string' &&
-      typeof tmpl.createdAt === 'string'
-    )
-  })
+  return {
+    valid,
+    invalidCount: records.length - valid.length,
+  }
 }

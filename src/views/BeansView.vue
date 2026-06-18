@@ -47,6 +47,7 @@ const rules: FormRules = {
     { max: 30, message: '豆名不超过 30 个字符', trigger: 'blur' },
   ],
   origin: [
+    { required: true, message: '请输入产地', trigger: 'blur' },
     { max: 30, message: '产地不超过 30 个字符', trigger: 'blur' },
   ],
   roastLevel: [

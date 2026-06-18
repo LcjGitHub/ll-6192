@@ -77,10 +77,12 @@ const selectedSource = computed(() => {
 
 const beanOptions = computed<SelectOption[]>(() =>
   brewStore.sortedBeans.map((b) => ({
-    label: b.name,
+    label: `${b.name} · ${b.origin} · ${b.roastLevel}`,
     value: b.id,
   }))
 )
+
+const hasBeans = computed(() => brewStore.sortedBeans.length > 0)
 
 const selectedBeanName = computed<string | undefined>(() => {
   if (!formModel.value.beanId) return undefined
@@ -159,13 +161,19 @@ function handleCancel() {
           />
         </NFormItem>
 
-        <NFormItem label="咖啡豆" path="beanId">
+        <NFormItem v-if="hasBeans" label="咖啡豆" path="beanId">
           <NSelect
             v-model:value="formModel.beanId"
             :options="beanOptions"
             placeholder="可选，选择咖啡豆"
             clearable
           />
+        </NFormItem>
+        <NFormItem v-else label="咖啡豆">
+          <NText depth="3" class="bean-empty-hint">
+            还没有咖啡豆档案，
+            <a class="bean-link" @click="router.push({ name: 'beans' })">前往添加 →</a>
+          </NText>
         </NFormItem>
 
         <NFormItem v-if="selectedTemplate" label="模板参数">
@@ -257,5 +265,20 @@ function handleCancel() {
 .template-name {
   font-weight: 600;
   color: #6f4e37;
+}
+
+.bean-empty-hint {
+  font-size: 14px;
+}
+
+.bean-link {
+  color: #6f4e37;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.bean-link:hover {
+  text-decoration: underline;
 }
 </style>

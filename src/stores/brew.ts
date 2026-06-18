@@ -204,6 +204,54 @@ export const useBrewStore = defineStore('brew', {
     deleteCustomTemplate(id: string) {
       this.customTemplates = this.customTemplates.filter((t) => t.id !== id)
     },
+
+    /**
+     * 批量添加冲煮记录（按 id 去重，返回新增条数）
+     */
+    addRecords(newRecords: BrewRecord[]): number {
+      const existingIds = new Set(this.records.map((r) => r.id))
+      const toAdd = newRecords.filter((r) => !existingIds.has(r.id))
+      this.records.push(...toAdd)
+      return toAdd.length
+    },
+
+    /**
+     * 清空所有冲煮记录
+     */
+    clearRecords() {
+      this.records = []
+    },
+
+    /**
+     * 批量添加自定义模板（按 id 去重，返回新增条数）
+     */
+    addCustomTemplates(newTemplates: CustomBrewTemplate[]): number {
+      const existingIds = new Set(this.customTemplates.map((t) => t.id))
+      const toAdd = newTemplates.filter((t) => !existingIds.has(t.id))
+      this.customTemplates.push(...toAdd)
+      return toAdd.length
+    },
+
+    /**
+     * 清空所有自定义模板
+     */
+    clearCustomTemplates() {
+      this.customTemplates = []
+    },
+
+    /**
+     * 覆盖写入所有记录（先清空后写入）
+     */
+    replaceRecords(records: BrewRecord[]) {
+      this.records = [...records]
+    },
+
+    /**
+     * 覆盖写入所有自定义模板（先清空后写入）
+     */
+    replaceCustomTemplates(templates: CustomBrewTemplate[]) {
+      this.customTemplates = [...templates]
+    },
   },
 
   persist: {

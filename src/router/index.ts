@@ -15,6 +15,12 @@ const router = createRouter({
       component: () => import('@/views/NewBrewView.vue'),
       meta: { title: '新建记录' },
     },
+    {
+      path: '/stats',
+      name: 'stats',
+      component: () => import('@/views/StatsView.vue'),
+      meta: { title: '数据统计' },
+    },
   ],
 })
 

@@ -40,3 +40,21 @@ export interface BrewFormModel {
   notes: string
   date: number | null
 }
+
+/**
+ * 模板使用次数排行项
+ */
+export interface TemplateUsageRank {
+  templateId: string
+  templateName: string
+  count: number
+}
+
+/**
+ * 每日冲煮次数
+ */
+export interface DailyCount {
+  date: string
+  weekday: string
+  count: number
+}

@@ -10,10 +10,11 @@ import {
   NAlert,
   useDialog,
   useMessage,
+  type SelectOption,
+  type SelectGroupOption,
 } from 'naive-ui'
 import { useBrewStore } from '@/stores/brew'
 import { formatBrewTime, formatBrewTimeChinese } from '@/utils/format'
-import type { SelectOption } from 'naive-ui'
 
 const brewStore = useBrewStore()
 const dialog = useDialog()
@@ -25,11 +26,34 @@ const isRunning = ref(false)
 const isFinished = ref(false)
 let timerInterval: ReturnType<typeof setInterval> | null = null
 
-const templateOptions = computed<SelectOption[]>(() => {
-  return brewStore.allTemplates.map((tpl) => ({
-    label: tpl.name,
-    value: tpl.id,
-  }))
+const templateOptions = computed<(SelectOption | SelectGroupOption)[]>(() => {
+  const result: (SelectOption | SelectGroupOption)[] = []
+  result.push({
+    type: 'group',
+    label: '系统模板',
+    key: 'system-group',
+    children: brewStore.systemTemplates.map((t) => ({
+      label: t.name,
+      value: t.id,
+    })),
+  })
+  if (brewStore.sortedCustomTemplates.length > 0) {
+    result.push({
+      type: 'group',
+      label: '我的方案',
+      key: 'custom-group',
+      children: brewStore.sortedCustomTemplates.map((t) => ({
+        label: t.name,
+        value: t.id,
+      })),
+    })
+  }
+  return result
+})
+
+const selectedSource = computed(() => {
+  if (!selectedTemplateId.value) return null
+  return brewStore.allTemplates.find((t) => t.id === selectedTemplateId.value)?.source ?? null
 })
 
 const selectedTemplate = computed(() => {
@@ -37,12 +61,18 @@ const selectedTemplate = computed(() => {
   return brewStore.getTemplateById(selectedTemplateId.value)
 })
 
-const displayTime = computed(() => {
-  return formatBrewTime(remainingSeconds.value)
+const totalTimeDisplay = computed(() => {
+  if (!selectedTemplate.value) return '0:00'
+  return formatBrewTime(selectedTemplate.value.brewTime)
 })
 
-const displayTimeChinese = computed(() => {
-  return formatBrewTimeChinese(remainingSeconds.value)
+const totalTimeChinese = computed(() => {
+  if (!selectedTemplate.value) return '0分00秒'
+  return formatBrewTimeChinese(selectedTemplate.value.brewTime)
+})
+
+const remainingTimeDisplay = computed(() => {
+  return formatBrewTime(remainingSeconds.value)
 })
 
 const progressPercent = computed(() => {
@@ -52,9 +82,23 @@ const progressPercent = computed(() => {
   return ((total - remainingSeconds.value) / total) * 100
 })
 
-function handleTemplateChange(value: string) {
+function clearTimerInterval() {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+}
+
+function handleTemplateChange(value: string | null) {
+  clearTimerInterval()
+  isRunning.value = false
+  isFinished.value = false
   selectedTemplateId.value = value
-  resetTimer()
+  if (value && selectedTemplate.value) {
+    remainingSeconds.value = selectedTemplate.value.brewTime
+  } else {
+    remainingSeconds.value = 0
+  }
 }
 
 function startTimer() {
@@ -62,16 +106,18 @@ function startTimer() {
     message.warning('请先选择一个冲煮模板')
     return
   }
+  clearTimerInterval()
   if (isFinished.value) {
-    resetTimer()
+    remainingSeconds.value = selectedTemplate.value.brewTime
+    isFinished.value = false
   }
   isRunning.value = true
-  isFinished.value = false
   timerInterval = setInterval(() => {
     if (remainingSeconds.value > 0) {
       remainingSeconds.value--
     } else {
-      stopTimer()
+      clearTimerInterval()
+      isRunning.value = false
       handleTimerFinish()
     }
   }, 1000)
@@ -79,22 +125,12 @@ function startTimer() {
 
 function pauseTimer() {
   isRunning.value = false
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
-}
-
-function stopTimer() {
-  isRunning.value = false
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
+  clearTimerInterval()
 }
 
 function resetTimer() {
-  stopTimer()
+  clearTimerInterval()
+  isRunning.value = false
   isFinished.value = false
   if (selectedTemplate.value) {
     remainingSeconds.value = selectedTemplate.value.brewTime
@@ -135,17 +171,14 @@ function showFinishDialog() {
   })
 }
 
-watch(selectedTemplate, (newTpl) => {
-  if (newTpl && !isRunning.value) {
-    remainingSeconds.value = newTpl.brewTime
+watch(selectedTemplateId, (newId, oldId) => {
+  if (newId !== oldId) {
+    handleTemplateChange(newId)
   }
 })
 
 onUnmounted(() => {
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
+  clearTimerInterval()
 })
 </script>
 
@@ -163,14 +196,22 @@ onUnmounted(() => {
         <NSelect
           v-model:value="selectedTemplateId"
           :options="templateOptions"
-          placeholder="请选择一个冲煮模板"
-          @update:value="handleTemplateChange"
+          placeholder="选择系统模板或我的方案"
           clearable
         />
       </div>
 
       <div v-if="selectedTemplate" class="template-info">
-        <NSpace :size="8" wrap>
+        <div class="template-header">
+          <span class="template-name">{{ selectedTemplate.name }}</span>
+          <NTag
+            size="small"
+            :type="selectedSource === 'system' ? 'info' : 'success'"
+          >
+            {{ selectedSource === 'system' ? '系统模板' : '自定义' }}
+          </NTag>
+        </div>
+        <NSpace :size="8" wrap class="template-tags">
           <NTag :bordered="false" type="info">粉水比 {{ selectedTemplate.ratio }}</NTag>
           <NTag :bordered="false" type="warning">{{ selectedTemplate.waterTemp }}°C</NTag>
           <NTag :bordered="false" type="success">
@@ -184,24 +225,41 @@ onUnmounted(() => {
     </NCard>
 
     <NCard class="timer-display-card">
-      <div class="timer-display" :class="{ 'timer-finished': isFinished }">
-        <span class="timer-text">{{ displayTime }}</span>
-        <div class="timer-subtext">{{ displayTimeChinese }}</div>
+      <div
+        class="total-time-display"
+        :class="{ 'timer-finished': isFinished }"
+      >
+        <div class="total-label">建议总时长</div>
+        <span class="total-time-text">{{ totalTimeDisplay }}</span>
+        <div class="total-subtext">{{ totalTimeChinese }}</div>
       </div>
 
-      <div v-if="selectedTemplate" class="progress-bar-wrapper">
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" :style="{ width: `${progressPercent}%` }"></div>
+      <div v-if="selectedTemplate" class="remaining-section">
+        <div class="remaining-label">剩余时间</div>
+        <div
+          class="remaining-time-display"
+          :class="{ 'remaining-finished': isFinished }"
+        >
+          <span class="remaining-time-text">{{ remainingTimeDisplay }}</span>
         </div>
-        <div class="progress-label">
-          已完成 {{ progressPercent.toFixed(0) }}%
-        </div>
-      </div>
 
-      <div v-if="isFinished" class="finish-banner">
-        <NAlert type="success" title="冲煮完成！">
-          时间到，请停止注水，享受你的咖啡吧 ☕
-        </NAlert>
+        <div class="progress-bar-wrapper">
+          <div class="progress-bar-bg">
+            <div
+              class="progress-bar-fill"
+              :style="{ width: `${progressPercent}%` }"
+            ></div>
+          </div>
+          <div class="progress-label">
+            已完成 {{ progressPercent.toFixed(0) }}%
+          </div>
+        </div>
+
+        <div v-if="isFinished" class="finish-banner">
+          <NAlert type="success" title="冲煮完成！">
+            时间到，请停止注水，享受你的咖啡吧 ☕
+          </NAlert>
+        </div>
       </div>
     </NCard>
 
@@ -279,6 +337,23 @@ onUnmounted(() => {
   border-top: 1px solid #f0f0f0;
 }
 
+.template-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.template-name {
+  font-weight: 600;
+  color: #6f4e37;
+  font-size: 15px;
+}
+
+.template-tags {
+  margin-bottom: 4px;
+}
+
 .template-desc {
   margin: 12px 0 0;
   font-size: 13px;
@@ -291,13 +366,20 @@ onUnmounted(() => {
   text-align: center;
 }
 
-.timer-display {
-  padding: 40px 20px;
+.total-time-display {
+  padding: 32px 20px 24px;
   transition: all 0.3s ease;
+  border-bottom: 1px dashed #e8e8e8;
 }
 
-.timer-text {
-  font-size: 96px;
+.total-label {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.total-time-text {
+  font-size: 80px;
   font-weight: 700;
   color: #6f4e37;
   font-family: 'Segoe UI', system-ui, monospace;
@@ -305,13 +387,13 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-.timer-subtext {
-  margin-top: 16px;
-  font-size: 18px;
+.total-subtext {
+  margin-top: 12px;
+  font-size: 16px;
   color: #999;
 }
 
-.timer-finished .timer-text {
+.timer-finished .total-time-text {
   color: #18a058;
   animation: pulse 1s ease-in-out infinite;
 }
@@ -321,13 +403,40 @@ onUnmounted(() => {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.03);
   }
 }
 
+.remaining-section {
+  padding: 24px 20px 8px;
+}
+
+.remaining-label {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.remaining-time-display {
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.remaining-time-text {
+  font-size: 48px;
+  font-weight: 600;
+  color: #a67c52;
+  font-family: 'Segoe UI', system-ui, monospace;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+
+.remaining-finished .remaining-time-text {
+  color: #18a058;
+}
+
 .progress-bar-wrapper {
-  margin-top: 8px;
-  padding: 0 20px 20px;
+  margin-bottom: 8px;
 }
 
 .progress-bar-bg {
@@ -352,7 +461,7 @@ onUnmounted(() => {
 }
 
 .finish-banner {
-  margin: 0 20px 20px;
+  margin-top: 16px;
 }
 
 .timer-controls {
@@ -372,16 +481,24 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
-  .timer-text {
-    font-size: 64px;
+  .total-time-text {
+    font-size: 60px;
   }
 
-  .timer-subtext {
-    font-size: 16px;
+  .total-subtext {
+    font-size: 15px;
   }
 
-  .timer-display {
-    padding: 30px 16px;
+  .total-time-display {
+    padding: 28px 16px 20px;
+  }
+
+  .remaining-time-text {
+    font-size: 36px;
+  }
+
+  .remaining-section {
+    padding: 20px 16px 8px;
   }
 }
 </style>
